@@ -1,0 +1,51 @@
+{
+  "name": "@tinysend/better-auth",
+  "version": "0.1.0",
+  "description": "better-auth email provider — send verification, magic-link, OTP and account-security emails through tinysend",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm run build"
+  },
+  "keywords": [
+    "tinysend",
+    "better-auth",
+    "auth",
+    "email",
+    "verification",
+    "magic-link",
+    "otp",
+    "transactional"
+  ],
+  "author": "System Operator LLC",
+  "license": "MIT",
+  "homepage": "https://tinysend.com/developers/better-auth",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tiny-send/tinysend-better-auth"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "peerDependencies": {
+    "tinysend": ">=0.4.0"
+  },
+  "devDependencies": {
+    "tinysend": "^0.4.0",
+    "typescript": "^5.9.3"
+  }
+}
