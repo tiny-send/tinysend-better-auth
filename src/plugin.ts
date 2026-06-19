@@ -48,8 +48,14 @@ export interface TinysendOptions {
 	notifications?: { passwordChanged?: boolean; emailChanged?: boolean; twoFactor?: boolean } | false;
 	/** Path the unsubscribe webhook is mounted at (under /api/auth). Default "/tinysend/webhook". */
 	webhookPath?: string;
-	/** Auto-create the tinysend webhook on first sync. Default true. */
+	/** Auto-create the tinysend webhook on first sync (and persist its secret in a small table). Default true. */
 	registerWebhook?: boolean;
+	/**
+	 * Verify incoming webhooks against this secret instead of auto-registering.
+	 * Provide it (create the webhook yourself in tinysend, copy its secret) to
+	 * avoid the `tinysendWebhook` table entirely — the plugin then needs no extra schema beyond the two user fields.
+	 */
+	webhookSecret?: string;
 	/** Defer sync until after the response (edge runtimes). */
 	waitUntil?: (promise: Promise<unknown>) => void;
 	/** Called on any sync/send failure. The auth operation is never blocked. */
@@ -102,10 +108,14 @@ export const tinysend = (opts: TinysendOptions) => {
 		opts.notifications !== false && (opts.notifications?.[event] ?? true);
 	const activeNotifs = NOTIFICATIONS.filter((n) => notifyEnabled(n.event));
 	const notifPaths = activeNotifs.flatMap((n) => n.paths);
+	// The plugin only needs its own table when it auto-registers the webhook AND
+	// has to persist the server-generated secret. A provided webhookSecret (or
+	// registerWebhook:false) means no table is added to the host schema.
+	const usesWebhookTable = registerWebhook !== false && !opts.webhookSecret;
 
 	/** Find-or-create the tinysend webhook so unsubscribes propagate back. Lazy, idempotent. */
 	async function ensureWebhook(adapter: any): Promise<void> {
-		if (registerWebhook === false) return;
+		if (!usesWebhookTable) return;
 		const existing = await adapter.findOne({ model: 'tinysendWebhook', where: [{ field: 'listId', value: opts.listId }] });
 		if (existing) return;
 		const res = await ts.webhooks.create({
@@ -139,13 +149,18 @@ export const tinysend = (opts: TinysendOptions) => {
 					newsletterStatus: { type: 'string', required: false, input: false },
 				},
 			},
-			tinysendWebhook: {
-				fields: {
-					listId: { type: 'string', required: true, unique: true },
-					webhookId: { type: 'string', required: true },
-					secret: { type: 'string', required: true },
-				},
-			},
+			// only added when the plugin auto-registers the webhook (no webhookSecret provided)
+			...(usesWebhookTable
+				? {
+						tinysendWebhook: {
+							fields: {
+								listId: { type: 'string', required: true, unique: true },
+								webhookId: { type: 'string', required: true },
+								secret: { type: 'string', required: true },
+							},
+						},
+					}
+				: {}),
 		},
 		init: (ctx: any) => ({
 			options: {
@@ -224,11 +239,15 @@ export const tinysend = (opts: TinysendOptions) => {
 				'/tinysend/webhook',
 				{ method: 'POST' },
 				async (c: any) => {
-					const row = await c.context.adapter.findOne({ model: 'tinysendWebhook', where: [{ field: 'listId', value: opts.listId }] });
+					const secret =
+						opts.webhookSecret ??
+						(usesWebhookTable
+							? (await c.context.adapter.findOne({ model: 'tinysendWebhook', where: [{ field: 'listId', value: opts.listId }] }))?.secret
+							: undefined);
 					const raw = c.request ? await c.request.clone().text() : JSON.stringify(c.body ?? {});
-					if (row?.secret) {
+					if (secret) {
 						const sig = c.request?.headers.get('x-tinysend-signature') ?? '';
-						const expected = await hmacHex(row.secret, raw);
+						const expected = await hmacHex(secret, raw);
 						if (!sig || sig !== expected) return c.json({ ok: false }, { status: 401 });
 					}
 					let evt: any;

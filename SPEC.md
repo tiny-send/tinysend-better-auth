@@ -31,7 +31,7 @@ instead of a CRM. status: built 2026-06-19, NOT resubmitted to better-auth (anto
 
 - user.tinysendSubscriberId (string) — the subscriber id, used to unsubscribe + match webhooks
 - user.newsletterStatus (string) — "pending" | "subscribed" | "unsubscribed" | "none"
-- tinysendWebhook table { listId unique, webhookId, secret } — stores the self-registered webhook + its HMAC secret
+- tinysendWebhook table { listId unique, webhookId, secret } — CONDITIONAL: only added when the plugin auto-registers the webhook (registerWebhook!==false AND no webhookSecret). pass `webhookSecret` (create the webhook yourself, copy its secret) to skip the table entirely — then the two user fields are the only schema. set registerWebhook:false to drop the inbound webhook (and table) at the cost of email→app unsubscribe propagation.
 
 ## opt-in (both via subscribers.create — carries tags/metadata either way)
 
@@ -68,11 +68,12 @@ writes are additive (tags unioned, metadata shallow-merged, never cleared) via `
 
 tags render as vCard CATEGORIES on the contact card (Apple shows them). decided default: CATEGORIES (quiet, portable); a browsable `tag-{slug}` group is a future opt-in. lists stay as their own `group-{listId}` groups — tags and lists are separate axes, never conflated.
 
-## Phase 1 status (tinysend product) — DONE in code, not yet deployed
+## status — SHIPPED 2026-06-19
 
 - migration applied to prod: contacts.tags + contacts.metadata + GIN index
 - data layer: addSubscriber accepts `contact: {tags, metadata, org, jobTitle}`, merges additively
-- API: POST .../subscribers accepts tags/metadata/org/job_title
-- SDK: CreateSubscriberParams gains the same (typecheck + openapi pass)
-- CardDAV: contacts.tags → CATEGORIES on the contact vCard
-- pending deploy: api + carddav workers; publish SDK 0.5.0; then publish @tinysend/better-auth 0.2.0
+- API: POST .../subscribers accepts tags/metadata/org/job_title — DEPLOYED (tinysend-api)
+- CardDAV: contacts.tags → CATEGORIES on the contact vCard — DEPLOYED (tinysend-carddav)
+- SDK `tinysend@0.5.0` — published to npm
+- plugin `@tinysend/better-auth@0.2.0` — published to npm
+- NOT resubmitted to the better-auth community list (anton's call). next: dogfood.
