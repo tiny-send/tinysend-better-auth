@@ -1,7 +1,7 @@
 {
   "name": "@tinysend/better-auth",
-  "version": "0.1.0",
-  "description": "better-auth email provider — send verification, magic-link, OTP and account-security emails through tinysend",
+  "version": "0.2.0",
+  "description": "better-auth plugin — sync your users into a tinysend audience (tags + metadata), send auth & security emails, propagate unsubscribes",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,6 +9,10 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./client": {
+      "import": "./dist/client.js",
+      "types": "./dist/client.d.ts"
     }
   },
   "files": [
@@ -42,10 +46,13 @@
     "node": ">=18"
   },
   "peerDependencies": {
-    "tinysend": ">=0.4.0"
+    "better-auth": ">=1.0.0",
+    "tinysend": ">=0.5.0"
   },
   "devDependencies": {
-    "tinysend": "^0.4.0",
-    "typescript": "^5.9.3"
+    "better-auth": "^1.6.19",
+    "tinysend": "^0.5.0",
+    "typescript": "^5.9.3",
+    "zod": "^4.4.3"
   }
 }
